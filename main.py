@@ -10,7 +10,13 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-import datetime as dt
+from sklearn.preprocessing import StandardScaler
+from sklearn.neighbors import NearestNeighbors
+from random import sample
+from numpy.random import uniform
+import numpy as np
+from math import isnan
+
 
 # 1. Read and understand data
 retail_df = pd.read_csv('Online_Retail.csv', sep=",",
@@ -96,6 +102,56 @@ grouped_df = monetary_df
 
 # 3. Prepare data for modelling (STANDARDISE)
 # outlier treatment
-plt.boxplot(grouped_df['Monetary'])
-plt.show()
-# rescaling
+# plt.boxplot(grouped_df['Recency'])
+# plt.show()
+# remove outlier data after discussion with business
+# because we don't know which data point looks extremely unusual
+
+
+# rescaling - bring all dimensions to one scale
+# get subset of main data frame to remove customer id
+rfm_df = grouped_df[['Recency', 'Frequency', 'Monetary']]
+print(rfm_df.head())
+
+# use a standard scaler to bring all dimensions to one scale
+scaler = StandardScaler()
+
+rfm_df_scaled = scaler.fit_transform(rfm_df)
+print(rfm_df_scaled)
+
+# checking if the data frame is suitable for clustering or not using HOPKINS STATISTIC
+
+
+def hopkins(X):
+    d = X.shape[1]
+    # d = len(vars) # columns
+    n = len(X)  # rows
+    m = int(0.1 * n)
+    nbrs = NearestNeighbors(n_neighbors=1).fit(X.values)
+
+    rand_X = sample(range(0, n, 1), m)
+
+    ujd = []
+    wjd = []
+    for j in range(0, m):
+        u_dist, _ = nbrs.kneighbors(uniform(np.amin(X, axis=0), np.amax(
+            X, axis=0), d).reshape(1, -1), 2, return_distance=True)
+        ujd.append(u_dist[0][1])
+        w_dist, _ = nbrs.kneighbors(
+            X.iloc[rand_X[j]].values.reshape(1, -1), 2, return_distance=True)
+        wjd.append(w_dist[0][1])
+
+    H = sum(ujd) / (sum(ujd) + sum(wjd))
+    if isnan(H):
+        print(ujd, wjd)
+        H = 0
+
+    return H
+
+
+# First convert the numpy array that you have to a dataframe
+rfm_df_scaled = pd.DataFrame(rfm_df_scaled)
+rfm_df_scaled.columns = ['Recency', 'Frequency', 'Monetary']
+
+# Use the Hopkins Statistic function by passing the above dataframe as a paramter
+print(hopkins(rfm_df_scaled))
