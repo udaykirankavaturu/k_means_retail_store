@@ -16,6 +16,8 @@ from random import sample
 from numpy.random import uniform
 import numpy as np
 from math import isnan
+from sklearn.cluster import KMeans
+from sklearn.metrics import silhouette_score
 
 
 # 1. Read and understand data
@@ -117,6 +119,7 @@ print(rfm_df.head())
 scaler = StandardScaler()
 
 rfm_df_scaled = scaler.fit_transform(rfm_df)
+print('after standard scaling')
 print(rfm_df_scaled)
 
 # checking if the data frame is suitable for clustering or not using HOPKINS STATISTIC
@@ -153,5 +156,55 @@ def hopkins(X):
 rfm_df_scaled = pd.DataFrame(rfm_df_scaled)
 rfm_df_scaled.columns = ['Recency', 'Frequency', 'Monetary']
 
-# Use the Hopkins Statistic function by passing the above dataframe as a paramter
+# Use the Hopkins Statistic function by passing the above dataframe as a paramter.
+
+# The Hopkins statistic (introduced by Brian Hopkins and John Gordon Skellam) is a way of measuring the cluster tendency
+# of a data set.[1] It belongs to the family of sparse sampling tests.
+# It acts as a statistical hypothesis test where the null hypothesis is that the data is generated
+# by a Poisson point process and are thus uniformly randomly distributed.[2] A value close to 1
+# tends to indicate the data is highly clustered, random data will tend to result in values around 0.5,
+# and uniformly distributed data will tend to result in values close to 0.[3]
+print('hopkins statistic value')
 print(hopkins(rfm_df_scaled))
+
+
+# run the k-means algorithm on the dataset
+kmeans = KMeans(n_clusters=4, max_iter=50)
+kmeans.fit(rfm_df_scaled)
+print('after clustering')
+print(kmeans.labels_)
+
+
+# how to determine the number of clusters
+# ELBOW CURVE METHOD
+ssd = []
+range_n_clusters = [2, 3, 4, 5, 6, 7, 8]
+for num_clusters in range_n_clusters:
+    # run the clustering
+    kmeans = KMeans(n_clusters=num_clusters, max_iter=50)
+    kmeans.fit(rfm_df_scaled)
+
+    # get the ssds and append
+    ssd.append(kmeans.inertia_)
+
+# plot the SSDs (sum of squared distances)
+# plt.plot(ssd)
+# plt.show()
+
+# observe the drop between number of clusters
+# if the drop is significant it's good, once drop becomes less significant we can stop
+# in this example, ssd drops about 50% from number of clusters from 2 to 3, but not so much after
+# so we can optimally choose to have 3 clusters
+
+
+# SILHOUETTE SCORE METHOD
+for num_clusters in range_n_clusters:
+    # run the clustering
+    kmeans = KMeans(n_clusters=num_clusters, max_iter=50)
+    kmeans.fit(rfm_df_scaled)
+    cluster_labels = kmeans.labels_
+
+    # calculate the silhouette score
+    silhouette_avg = silhouette_score(rfm_df_scaled, cluster_labels)
+    print(
+        f'For {num_clusters} clusters, the average silhouette score is {silhouette_avg}')
