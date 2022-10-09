@@ -109,10 +109,31 @@ grouped_df = monetary_df
 # remove outlier data after discussion with business
 # because we don't know which data point looks extremely unusual
 
+# removing (statistical) outliers
+Q1 = grouped_df.Monetary.quantile(0.05)
+Q3 = grouped_df.Monetary.quantile(0.95)
+IQR = Q3 - Q1
+grouped_df = grouped_df[(grouped_df.Monetary >= Q1 - 1.5*IQR)
+                        & (grouped_df.Monetary <= Q3 + 1.5*IQR)]
+
+# outlier treatment for recency
+Q1 = grouped_df.Recency.quantile(0.05)
+Q3 = grouped_df.Recency.quantile(0.95)
+IQR = Q3 - Q1
+grouped_df = grouped_df[(grouped_df.Recency >= Q1 - 1.5*IQR)
+                        & (grouped_df.Recency <= Q3 + 1.5*IQR)]
+
+# outlier treatment for frequency
+Q1 = grouped_df.Frequency.quantile(0.05)
+Q3 = grouped_df.Frequency.quantile(0.95)
+IQR = Q3 - Q1
+grouped_df = grouped_df[(grouped_df.Frequency >= Q1 - 1.5*IQR)
+                        & (grouped_df.Frequency <= Q3 + 1.5*IQR)]
+
 
 # rescaling - bring all dimensions to one scale
 # get subset of main data frame to remove customer id
-rfm_df = grouped_df[['Recency', 'Frequency', 'Monetary']]
+rfm_df = grouped_df[['Monetary', 'Recency', 'Frequency']]
 print(rfm_df.head())
 
 # use a standard scaler to bring all dimensions to one scale
@@ -154,7 +175,7 @@ def hopkins(X):
 
 # First convert the numpy array that you have to a dataframe
 rfm_df_scaled = pd.DataFrame(rfm_df_scaled)
-rfm_df_scaled.columns = ['Recency', 'Frequency', 'Monetary']
+rfm_df_scaled.columns = ['Monetary', 'Recency', 'Frequency']
 
 # Use the Hopkins Statistic function by passing the above dataframe as a paramter.
 
@@ -168,7 +189,7 @@ print('hopkins statistic value')
 print(hopkins(rfm_df_scaled))
 
 
-# run the k-means algorithm on the dataset
+# run the k-means algorithm on the dataset assuming number of clusters to be 4
 kmeans = KMeans(n_clusters=4, max_iter=50)
 kmeans.fit(rfm_df_scaled)
 print('after clustering')
@@ -208,3 +229,26 @@ for num_clusters in range_n_clusters:
     silhouette_avg = silhouette_score(rfm_df_scaled, cluster_labels)
     print(
         f'For {num_clusters} clusters, the average silhouette score is {silhouette_avg}')
+
+# ideally choose the score that is closer to 1, but takes business perspective as well
+# in our example, 2 clusters gave the best score, but just 2 customer segments may be too less
+# so we can go ahead with 3 after discussion with business
+
+# run clustering for 3 clusters
+kmeans = KMeans(n_clusters=3, max_iter=50)
+kmeans.fit(rfm_df_scaled)
+
+# assign clusters to data points
+grouped_df['ClusterID'] = kmeans.labels_
+print('after assigning cluster IDs...')
+print(grouped_df.head())
+
+# plot the clusters for further analysis
+sns.boxplot(x='ClusterID', y='Recency', data=grouped_df)
+plt.show()
+sns.boxplot(x='ClusterID', y='Frequency', data=grouped_df)
+plt.show()
+sns.boxplot(x='ClusterID', y='Monetary', data=grouped_df)
+plt.show()
+
+# after analysis remove outliers for better clustering
