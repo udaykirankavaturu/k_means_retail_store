@@ -6,6 +6,8 @@
 # 5. Final analysis and reco
 
 
+from os import link
+from tokenize import group
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -18,7 +20,9 @@ import numpy as np
 from math import isnan
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
-
+from scipy.cluster.hierarchy import linkage
+from scipy.cluster.hierarchy import dendrogram
+from scipy.cluster.hierarchy import cut_tree
 
 # 1. Read and understand data
 retail_df = pd.read_csv('Online_Retail.csv', sep=",",
@@ -244,11 +248,31 @@ print('after assigning cluster IDs...')
 print(grouped_df.head())
 
 # plot the clusters for further analysis
-sns.boxplot(x='ClusterID', y='Recency', data=grouped_df)
-plt.show()
-sns.boxplot(x='ClusterID', y='Frequency', data=grouped_df)
-plt.show()
-sns.boxplot(x='ClusterID', y='Monetary', data=grouped_df)
-plt.show()
+# sns.boxplot(x='ClusterID', y='Recency', data=grouped_df)
+# plt.show()
+# sns.boxplot(x='ClusterID', y='Frequency', data=grouped_df)
+# plt.show()
+# sns.boxplot(x='ClusterID', y='Monetary', data=grouped_df)
+# plt.show()
 
-# after analysis remove outliers for better clustering
+
+# HIERARCHICAL CLUSTERING
+# mergings = linkage(rfm_df_scaled, method="single", metric="euclidean") #not so good with single linkage
+mergings = linkage(rfm_df_scaled, method="complete", metric="euclidean")
+# dendrogram(mergings)
+# plt.show()
+
+cluster_labels = cut_tree(mergings, n_clusters=3).reshape(-1, )
+# assign cluster labels to dataset
+grouped_df['ClusterLabels'] = cluster_labels
+print('after assigning cluster labels from hierarchical clustering algorithm..')
+print(grouped_df.head())
+
+
+# plot the grouped_df after hierarcal clustering
+sns.boxplot(x='ClusterLabels', y='Recency', data=grouped_df)
+plt.show()
+sns.boxplot(x='ClusterLabels', y='Frequency', data=grouped_df)
+plt.show()
+sns.boxplot(x='ClusterLabels', y='Monetary', data=grouped_df)
+plt.show()
